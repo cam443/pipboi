@@ -1,4 +1,5 @@
 import pygame
+import numpy as np
 import sys
 import time
 import random
@@ -6,13 +7,17 @@ from stats import StatPage
 from data import DataPage
 from map import MapPage
 from radio import RadioPage
+from effects import CRTShader
+from effects import Overlay
+from effects import Scanline
 
 # Initialize Pygame
 pygame.init()
 
 # Constants
-SCREEN_WIDTH, SCREEN_HEIGHT = 400, 320
+SCREEN_WIDTH, SCREEN_HEIGHT = 640, 480 # 400, 320
 FPS = 30
+FULLSCREEN = False
 
 # Colors
 BLACK = (0, 0, 0)
@@ -23,7 +28,7 @@ DIM = (0, 70, 0)
 DARK = (0, 40, 0)
 
 # Screen setup
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), FULLSCREEN)
 pygame.display.set_caption("Pip-Boy Interface")
 
 # Font setup
@@ -31,48 +36,15 @@ font = pygame.font.Font(None, 36)
 small_font = pygame.font.Font(None, 24)
 
 # Pages
-pages = ["STAT", "DATA", "MAP", "RADIO"]
-page_objects = [StatPage(), DataPage(), MapPage(), RadioPage()]
+pages = ["STAT", "RADIO", "MAP", "DATA"]
+page_objects = [StatPage(), RadioPage(), MapPage(), DataPage()]
 current_page = 0
-
-# Overlay class
-class Overlay:
-    def __init__(self, image_path, width, height):
-        self.image = pygame.image.load(image_path).convert_alpha()
-        self.image = pygame.transform.scale(self.image, (width, height))
-    
-    def render(self, surface):
-        temp_surface = pygame.Surface((self.image.get_width(), self.image.get_height()), pygame.SRCALPHA)
-        temp_surface.blit(self.image, (0, 0))
-        surface.blit(temp_surface, (0, 0), special_flags=pygame.BLEND_ADD)
-
-# Scanline class
-class Scanline:
-    def __init__(self, image_path, width, height, speed=5, delay=2):
-        self.image = pygame.image.load(image_path).convert_alpha()
-        self.image = pygame.transform.scale(self.image, (width, height))
-        self.rect = self.image.get_rect()
-        self.speed = speed
-        self.delay = delay
-        self.last_move_time = time.time()
-        self.rect.y = -height
-
-    def update(self):
-        current_time = time.time()
-        if current_time - self.last_move_time > self.delay:
-            self.rect.y += self.speed
-            if self.rect.y >= SCREEN_HEIGHT:
-                self.rect.y = -self.rect.height
-                self.last_move_time = current_time
-
-    def render(self, surface):
-        surface.blit(self.image, self.rect, special_flags=pygame.BLEND_ADD)
 
 # Initialize overlay
 overlay = Overlay('images/overlay.png', SCREEN_WIDTH, SCREEN_HEIGHT)
 
 # Initialize scanline
-scanline = Scanline('images/scanline.png', SCREEN_WIDTH, 60, speed=2, delay=1.05)  # Increased height to 20
+scanline = Scanline('images/scanline.png', SCREEN_WIDTH, 60, SCREEN_HEIGHT, speed=2, delay=1.05)
 
 def draw_centered_text(text, font, color, surface, rect):
     textobj = font.render(text, 1, color)
@@ -103,6 +75,7 @@ def draw_interface(surface):
 def main():
     global current_page
     clock = pygame.time.Clock()
+    crt_shader = CRTShader((SCREEN_WIDTH, SCREEN_HEIGHT))
     
     while True:
         for event in pygame.event.get():
@@ -126,6 +99,12 @@ def main():
         scanline.update()
         scanline.render(screen)
 
+        # Apply CRT shader
+        crt_screen = crt_shader.apply(screen.copy())
+        
+        # Display the CRT screen
+        screen.blit(crt_screen, (0, 0))
+        
         pygame.display.flip()
         clock.tick(FPS)
 
