@@ -45,18 +45,33 @@ def draw_centered_text(text, font_size, color, surface, rect, font_type='RobotoB
 def draw_tabs(surface):
     tab_width = SCREEN_WIDTH // len(pages)
     for i, page in enumerate(pages):
-        tab_color = BRIGHT if i == current_page else BLACK
-        text_color = BLACK if i == current_page else BRIGHT
+        text_color = BRIGHT
         rect = pygame.Rect(i * tab_width, 0, tab_width, 50)
-        pygame.draw.rect(surface, tab_color, rect)
-        draw_centered_text(page, 30, text_color, surface, rect, 'RobotoB')
+        text_surface = RobotoB[30].render(page, True, text_color)
+        text_rect = text_surface.get_rect(center=(rect.centerx, rect.centery))
+        surface.blit(text_surface, text_rect)
+        
+        # Draw underline with arms for the active tab
+        if i == current_page:
+            # Draw lines to the left and right of the active tab
+            pygame.draw.line(surface, BRIGHT, (rect.left - 15, 50), (text_rect.left - 12, 50), 3)  # Line to the left of the tab
+            pygame.draw.line(surface, BRIGHT, (text_rect.right + 12, 50), (rect.right + 15, 50), 3)  # Line to the right of the tab
+            # Draw vertical and short horizontal bars for the active tab
+            pygame.draw.line(surface, BRIGHT, (text_rect.left - 12, 20), (text_rect.left - 12, 50), 3)  # Left vertical bar
+            pygame.draw.line(surface, BRIGHT, (text_rect.left - 12, 20), (text_rect.left - 4, 20), 3)  # Left short bar
+            pygame.draw.line(surface, BRIGHT, (text_rect.right + 4, 20), (text_rect.right + 12, 20), 3)  # Right short bar
+            pygame.draw.line(surface, BRIGHT, (text_rect.right + 12, 20), (text_rect.right + 12, 50), 3)  # Right vertical bar
+        else:
+            # Draw a simple horizontal line below inactive tabs
+            pygame.draw.line(surface, BRIGHT, (rect.left, 50), (rect.right, 50), 3)
 
 def draw_interface(surface):
     temp_surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
     temp_surface.fill((0, 0, 0, 0))  # Fully transparent background
     
     draw_tabs(temp_surface)
-    pygame.draw.line(temp_surface, BRIGHT, (0, 50), (SCREEN_WIDTH, 50), 2)
+    # Remove this line to avoid extra underline
+    # pygame.draw.line(temp_surface, BRIGHT, (0, 50), (SCREEN_WIDTH, 50), 2)
     current_page_object = page_objects[current_page]
     current_page_object.draw(temp_surface, RobotoR[24], BRIGHT)
     
