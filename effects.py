@@ -4,10 +4,14 @@ import time
 
 # Overlay class
 class Overlay:
-    def __init__(self, image_path, width, height, strength=1):  # Added strength parameter
-        self.image = pygame.image.load(image_path).convert_alpha()
-        self.image = pygame.transform.scale(self.image, (width, height))
+    def __init__(self, image_path, width, height, strength=1, scale_factor=1.5):
+        self.image_path = image_path
+        self.width = width
+        self.height = height
         self.strength = strength  # Store the strength value
+        self.scale_factor = scale_factor  # Factor to scale the image up
+        self.image = pygame.image.load(self.image_path).convert_alpha()
+        self.image = pygame.transform.scale(self.image, (int(self.width * self.scale_factor), int(self.height * self.scale_factor)))
     
     def render(self, surface):
         temp_surface = pygame.Surface((self.image.get_width(), self.image.get_height()), pygame.SRCALPHA)
@@ -82,7 +86,7 @@ class CRTShader:
                      wc[:, :, np.newaxis] * pixels[x1, y0] +
                      wd[:, :, np.newaxis] * pixels[x1, y1])
 
-        vignette = np.maximum(1 - d * 0.5, 0.0)
+        vignette = np.maximum(1 - d * 0, 0.0)  # Adjusted from 0.5 to 1
         distorted = (distorted * vignette[:, :, np.newaxis]).astype(np.uint8)
 
         distorted = np.transpose(distorted, (1, 0, 2))  # Correct the dimensions to match the surface

@@ -1,4 +1,5 @@
 import pygame
+import pygame.freetype
 import numpy as np
 import sys
 import time
@@ -10,30 +11,18 @@ from radio import RadioPage
 from effects import CRTShader
 from effects import Overlay
 from effects import Scanline
+from config import *
 
 # Initialize Pygame
 pygame.init()
 
-# Constants
-SCREEN_WIDTH, SCREEN_HEIGHT = 640, 480 # 400, 320
-FPS = 30
-FULLSCREEN = False
-
-# Colors
-BLACK = (0, 0, 0)
-BRIGHT = (0, 230, 0)
-LIGHT = (0, 170, 0)
-MID = (0, 120, 0)
-DIM = (0, 70, 0)
-DARK = (0, 40, 0)
-
 # Screen setup
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), FULLSCREEN)
+screen = pygame.display.set_mode((CANVAS_WIDTH, CANVAS_HEIGHT))
 pygame.display.set_caption("Pip-Boy Interface")
 
 # Font setup
-font = pygame.font.Font(None, 36)
-small_font = pygame.font.Font(None, 24)
+font = FreeTechMono[30]
+small_font = FreeTechMono[24]
 
 # Pages
 pages = ["STAT", "RADIO", "MAP", "DATA"]
@@ -41,13 +30,15 @@ page_objects = [StatPage(), RadioPage(), MapPage(), DataPage()]
 current_page = 0
 
 # Initialize overlay
-overlay = Overlay('images/overlay.png', SCREEN_WIDTH, SCREEN_HEIGHT)
+overlay = Overlay('images/overlay.png', SCREEN_WIDTH, SCREEN_HEIGHT, strength=1, scale_factor=2)
+underlay = Overlay('images/overlay_dark.png', SCREEN_WIDTH, SCREEN_HEIGHT, strength=1, scale_factor=2)
 
 # Initialize scanline
-scanline = Scanline('images/scanline.png', SCREEN_WIDTH, 60, SCREEN_HEIGHT, speed=2, delay=1.05)
+scanline = Scanline('images/scanline.png', SCREEN_WIDTH, 60, SCREEN_HEIGHT, speed=3, delay=1.05)
 
-def draw_centered_text(text, font, color, surface, rect):
-    textobj = font.render(text, 1, color)
+def draw_centered_text(text, font_size, color, surface, rect, font_type='RobotoB'):
+    font = globals()[font_type][font_size]
+    textobj = font.render(text, True, color)
     textrect = textobj.get_rect(center=(rect.centerx, rect.centery))
     surface.blit(textobj, textrect)
 
@@ -58,7 +49,7 @@ def draw_tabs(surface):
         text_color = BLACK if i == current_page else BRIGHT
         rect = pygame.Rect(i * tab_width, 0, tab_width, 50)
         pygame.draw.rect(surface, tab_color, rect)
-        draw_centered_text(page, font, text_color, surface, rect)
+        draw_centered_text(page, 30, text_color, surface, rect, 'RobotoB')
 
 def draw_interface(surface):
     temp_surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
@@ -67,7 +58,7 @@ def draw_interface(surface):
     draw_tabs(temp_surface)
     pygame.draw.line(temp_surface, BRIGHT, (0, 50), (SCREEN_WIDTH, 50), 2)
     current_page_object = page_objects[current_page]
-    current_page_object.draw(temp_surface, small_font, BRIGHT)
+    current_page_object.draw(temp_surface, RobotoR[24], BRIGHT)
     
     # Blit the UI elements onto the main surface
     surface.blit(temp_surface, (0, 0))
@@ -88,22 +79,33 @@ def main():
                 elif event.key == pygame.K_RIGHT:
                     current_page = (current_page + 1) % len(pages)
 
-        # Draw the UI elements
-        screen.fill(BLACK)  # Fill screen with black before drawing UI elements
-        draw_interface(screen)
+        # Create a canvas to render the game screen
+        canvas = pygame.Surface((CANVAS_WIDTH, CANVAS_HEIGHT))
+        canvas.fill(BLACK)  # Fill canvas with black before drawing UI elements
 
-        # Apply overlay (scanlines)
-        overlay.render(screen)
+        # Render the overlay on the canvas first (as a background)
+        overlay.render(canvas)
 
-        # Update and render scanline
+        # Draw the UI elements on the game screen
+        game_screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+        game_screen.fill(BLACK)
+        draw_interface(game_screen)
+
+        # Apply overlay (scanlines) on the game screen
+        overlay.render(game_screen)
+
+        # Update and render scanline on the game screen
         scanline.update()
-        scanline.render(screen)
+        scanline.render(game_screen)
 
-        # Apply CRT shader
-        crt_screen = crt_shader.apply(screen.copy())
-        
-        # Display the CRT screen
-        screen.blit(crt_screen, (0, 0))
+        # Apply CRT shader on the game screen
+        crt_screen = crt_shader.apply(game_screen.copy())
+
+        # Blit the CRT screen onto the canvas with the offset
+        canvas.blit(crt_screen, (OFFSET_X, OFFSET_Y))
+
+        # Display the canvas
+        screen.blit(canvas, (0, 0))
         
         pygame.display.flip()
         clock.tick(FPS)
