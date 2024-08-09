@@ -92,22 +92,22 @@ class StatPage:
        right_rect = pygame.Rect(3 * screen_width // 4, footer_y, screen_width // 4 - gap, footer_height)
 
        # Draw solid rectangles
-       pygame.draw.rect(surface, DARK, left_rect)
-       pygame.draw.rect(surface, DARK, middle_rect)
-       pygame.draw.rect(surface, DARK, right_rect)
+       pygame.draw.rect(surface, get_color('DARK'), left_rect)
+       pygame.draw.rect(surface, get_color('DARK'), middle_rect)
+       pygame.draw.rect(surface, get_color('DARK'), right_rect)
 
        # Draw text for HP
-       self.draw_text(f"HP: {self.hp}/{self.hp_max}", self.footer_bold, BRIGHT, surface, left_rect.x + 5, left_rect.centery - self.footer_bold.get_height() // 2)
+       self.draw_text(f"HP: {self.hp}/{self.hp_max}", self.footer_bold, get_color('BRIGHT'), surface, left_rect.x + 5, left_rect.centery - self.footer_bold.get_height() // 2)
 
        # Draw text for AP (right-aligned)
        ap_text = f"AP: {self.ap}/{self.ap_max}"
-       ap_surface = self.footer_bold.render(ap_text, True, BRIGHT)
+       ap_surface = self.footer_bold.render(ap_text, True, get_color('BRIGHT'))
        ap_rect = ap_surface.get_rect(right=right_rect.right - 5, centery=right_rect.centery)
        surface.blit(ap_surface, ap_rect)
 
        # Level and XP bar
        level_text = f"LEVEL {self.level}"
-       level_surface = self.footer_bold.render(level_text, True, BRIGHT)
+       level_surface = self.footer_bold.render(level_text, True, get_color('BRIGHT'))
 
        # XP bar
        xp_bar_width = middle_rect.width - level_surface.get_width() - 30
@@ -118,8 +118,8 @@ class StatPage:
 
        # Draw level text and XP bar
        surface.blit(level_surface, (middle_rect.x + 5, middle_rect.centery - level_surface.get_height() // 2))
-       pygame.draw.rect(surface, BRIGHT, (xp_bar_x, xp_bar_y, xp_bar_width, xp_bar_height), 2)
-       pygame.draw.rect(surface, BRIGHT, (xp_bar_x, xp_bar_y, xp_bar_width * xp_percentage, xp_bar_height))
+       pygame.draw.rect(surface, get_color('BRIGHT'), (xp_bar_x, xp_bar_y, xp_bar_width, xp_bar_height), 2)
+       pygame.draw.rect(surface, get_color('BRIGHT'), (xp_bar_x, xp_bar_y, xp_bar_width * xp_percentage, xp_bar_height))
 
     def draw(self, surface, font, color):
         #self.draw_text(self.content, font, color, surface, 20, 20)

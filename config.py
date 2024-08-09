@@ -1,14 +1,27 @@
 # config.py
 import pygame
 import pygame.freetype
+from settings import settings
 
 # Colors
 BLACK = (0, 0, 0)
-BRIGHT = (0, 230, 0)
-LIGHT = (0, 170, 0)
-MID = (0, 120, 0)
-DIM = (0, 70, 0)
-DARK = (0, 40, 0)
+COLOR_SCHEMES = {
+    'GREEN': {'BRIGHT': (0, 230, 0), 'LIGHT': (0, 170, 0), 'MID': (0, 120, 0), 'DIM': (0, 70, 0), 'DARK': (0, 40, 0)},
+    'CYAN': {'BRIGHT': (0, 230, 230), 'LIGHT': (0, 170, 170), 'MID': (0, 120, 120), 'DIM': (0, 70, 70), 'DARK': (0, 40, 40)},
+    'PURPLE': {'BRIGHT': (230, 0, 230), 'LIGHT': (170, 0, 170), 'MID': (120, 0, 120), 'DIM': (70, 0, 70), 'DARK': (40, 0, 40)},
+    'RED': {'BRIGHT': (230, 0, 0), 'LIGHT': (170, 0, 0), 'MID': (120, 0, 0), 'DIM': (70, 0, 0), 'DARK': (40, 0, 0)},
+    'YELLOW': {'BRIGHT': (230, 230, 0), 'LIGHT': (170, 170, 0), 'MID': (120, 120, 0), 'DIM': (70, 70, 0), 'DARK': (40, 40, 0)}
+}
+
+def get_color(color_name):
+    current_scheme = settings.get('ui_color')
+    return COLOR_SCHEMES[current_scheme][color_name]
+
+BRIGHT = property(lambda: get_color('BRIGHT'))
+LIGHT = property(lambda: get_color('LIGHT'))
+MID = property(lambda: get_color('MID'))
+DIM = property(lambda: get_color('DIM'))
+DARK = property(lambda: get_color('DARK'))
 
 # Screen settings
 SCREEN_WIDTH, SCREEN_HEIGHT = 640, 480

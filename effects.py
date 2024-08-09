@@ -23,7 +23,7 @@ class Overlay:
 class Scanline:
     def __init__(self, image_path, width, height, screen_height, speed=5, delay=2, strength=2):
         self.image = pygame.image.load(image_path).convert_alpha()
-        self.image = pygame.transform.scale(self.image, (width*1.1, height))
+        self.image = pygame.transform.scale(self.image, (width, height))
         self.rect = self.image.get_rect()
         self.speed = speed
         self.delay = delay
