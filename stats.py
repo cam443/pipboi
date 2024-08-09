@@ -38,6 +38,9 @@ class StatPage:
         self.ap = 60
         self.ap_max = 75
 
+        #Font Params
+        self.footer_bold = RobotoB[26]
+
     def resize_images(self):
         supersample_factor = self.supersample_factor
         self.leg_frames = [pygame.transform.smoothscale(frame, 
@@ -68,13 +71,13 @@ class StatPage:
             self.current_leg_frame = (self.current_leg_frame + 1) % len(self.leg_frames)
         
         leg_image = self.leg_frames[self.current_leg_frame]
-        leg_rect = leg_image.get_rect(center=(320, 260))  # Center on screen (400x320)
+        leg_rect = leg_image.get_rect(center=(320, 280))  # Center on screen (400x320)
         surface.blit(leg_image, leg_rect.topleft)
         
         # Calculate head bob offset based on current leg frame
         head_bob_offset = self.head_bob_amplitude * math.sin(self.current_leg_frame * (2 * math.pi / len(self.leg_frames)) - 1)
         head_bob_offset2 = self.head_bob_amplitude * math.sin(self.current_leg_frame * (2.1 * math.pi / len(self.leg_frames)) + 1)
-        head_rect = self.head_frame.get_rect(center=(318 + head_bob_offset2, 144 + head_bob_offset))  # Position above legs with bob
+        head_rect = self.head_frame.get_rect(center=(318 + head_bob_offset2, 164 + head_bob_offset))  # Position above legs with bob
         surface.blit(self.head_frame, head_rect.topleft)
 
     def draw_footer(self, surface, font, color):
@@ -89,27 +92,27 @@ class StatPage:
        right_rect = pygame.Rect(3 * screen_width // 4, footer_y, screen_width // 4 - gap, footer_height)
 
        # Draw solid rectangles
-       pygame.draw.rect(surface, DIM, left_rect)
-       pygame.draw.rect(surface, DIM, middle_rect)
-       pygame.draw.rect(surface, DIM, right_rect)
+       pygame.draw.rect(surface, DARK, left_rect)
+       pygame.draw.rect(surface, DARK, middle_rect)
+       pygame.draw.rect(surface, DARK, right_rect)
 
        # Draw text for HP
-       self.draw_text(f"HP: {self.hp}/{self.hp_max}", RobotoB[24], BRIGHT, surface, left_rect.x + 10, left_rect.centery - RobotoB[24].get_height() // 2)
+       self.draw_text(f"HP: {self.hp}/{self.hp_max}", self.footer_bold, BRIGHT, surface, left_rect.x + 5, left_rect.centery - self.footer_bold.get_height() // 2)
 
        # Draw text for AP (right-aligned)
        ap_text = f"AP: {self.ap}/{self.ap_max}"
-       ap_surface = font.render(ap_text, True, BRIGHT)
-       ap_rect = ap_surface.get_rect(right=right_rect.right - 10, centery=right_rect.centery)
+       ap_surface = self.footer_bold.render(ap_text, True, BRIGHT)
+       ap_rect = ap_surface.get_rect(right=right_rect.right - 5, centery=right_rect.centery)
        surface.blit(ap_surface, ap_rect)
 
        # Level and XP bar
        level_text = f"LEVEL {self.level}"
-       level_surface = font.render(level_text, True, BRIGHT)
+       level_surface = self.footer_bold.render(level_text, True, BRIGHT)
 
        # XP bar
-       xp_bar_width = middle_rect.width - level_surface.get_width() - 20
+       xp_bar_width = middle_rect.width - level_surface.get_width() - 30
        xp_bar_height = 15
-       xp_bar_x = middle_rect.x + level_surface.get_width() + 10
+       xp_bar_x = middle_rect.x + level_surface.get_width() + 20
        xp_bar_y = middle_rect.centery - xp_bar_height // 2
        xp_percentage = self.xp / self.max_xp
 
