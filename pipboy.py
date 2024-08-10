@@ -36,6 +36,16 @@ underlay = Overlay('images/overlay_dark.png', SCREEN_WIDTH, SCREEN_HEIGHT, stren
 # Initialize scanline
 scanline = Scanline('images/scanline.png', SCREEN_WIDTH, 60, SCREEN_HEIGHT, speed=3, delay=1.05)
 
+# MOUSE DEBUG
+def draw_mouse_position(surface, font, color):
+    mouse_x, mouse_y = pygame.mouse.get_pos()
+    adjusted_x = mouse_x - OFFSET_X
+    adjusted_y = mouse_y - OFFSET_Y
+    pos_text = f"X: {adjusted_x}, Y: {adjusted_y}"
+    text_surface, _ = font.render(pos_text, color)
+    surface.blit(text_surface, (10, 10))  # Position the text at the top-left corner
+# END MOUSE DEBUG
+
 def draw_centered_text(text, font_size, color, surface, rect, font_type='RobotoB'):
     font = globals()[font_type][font_size]
     textobj = font.render(text, True, color)
@@ -114,13 +124,18 @@ def main():
 
         # Update and render scanline on the game screen
         scanline.update()
-        scanline.render(game_screen)
+        scanline.render(game_screen, get_color('BRIGHT'))
 
         # Apply CRT shader on the game screen
         crt_screen = crt_shader.apply(game_screen.copy())
 
+
         # Blit the CRT screen onto the canvas with the offset
         canvas.blit(crt_screen, (OFFSET_X, OFFSET_Y))
+
+        # Display the mouse position for debugging
+        #draw_mouse_position(canvas, small_font, get_color('BRIGHT'))
+
 
         # Display the canvas
         screen.blit(canvas, (0, 0))

@@ -2,12 +2,16 @@ import pygame
 import os
 import math
 import random
-from config import * 
+from config import *
 
 class StatPage:
     def __init__(self):
         self.content = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec vehicula."
         
+        # FONTS
+        self.small_font = RobotoR[24]
+
+
         # Load leg frames at original size
         self.leg_frames = [pygame.image.load(os.path.join('images/legs', f'{i}.png')).convert_alpha() for i in range(1, 9)]
         self.current_leg_frame = 0
@@ -38,8 +42,28 @@ class StatPage:
         self.ap = 60
         self.ap_max = 75
 
-        #Font Params
+        # Font Params
         self.footer_bold = RobotoB[26]
+
+        # Sensor readouts
+        self.heart_rate = 72
+        self.spo2 = 98
+        self.temperature = 36.5
+        self.humidity = 45
+        self.pressure = 1013
+        self.altitude = 150
+        self.bac = 0.0
+
+        # Load icons
+        self.icons = {
+            "heart_rate": pygame.image.load('images/icons/heart.png').convert_alpha(),
+            "spo2": pygame.image.load('images/icons/ox.png').convert_alpha(),
+            "temperature": pygame.image.load('images/icons/temp.png').convert_alpha(),
+            "humidity": pygame.image.load('images/icons/humid.png').convert_alpha(),
+            "pressure": pygame.image.load('images/icons/pressure.png').convert_alpha(),
+            "altitude": pygame.image.load('images/icons/altitude.png').convert_alpha(),
+            "bac": pygame.image.load('images/icons/bac.png').convert_alpha()
+        }
 
     def resize_images(self):
         supersample_factor = self.supersample_factor
@@ -64,21 +88,24 @@ class StatPage:
         textrect.topleft = (x, y)
         surface.blit(textobj, textrect)
 
-    def draw_animation(self, surface):
+    def draw_animation(self, surface, color):
         now = pygame.time.get_ticks()
         if now - self.last_update > self.leg_frame_delay:
             self.last_update = now
             self.current_leg_frame = (self.current_leg_frame + 1) % len(self.leg_frames)
         
-        leg_image = self.leg_frames[self.current_leg_frame]
+        leg_image = self.leg_frames[self.current_leg_frame].copy()
+        leg_image.fill(color, special_flags=pygame.BLEND_MULT)
         leg_rect = leg_image.get_rect(center=(320, 280))  # Center on screen (400x320)
         surface.blit(leg_image, leg_rect.topleft)
         
         # Calculate head bob offset based on current leg frame
         head_bob_offset = self.head_bob_amplitude * math.sin(self.current_leg_frame * (2 * math.pi / len(self.leg_frames)) - 1)
         head_bob_offset2 = self.head_bob_amplitude * math.sin(self.current_leg_frame * (2.1 * math.pi / len(self.leg_frames)) + 1)
-        head_rect = self.head_frame.get_rect(center=(318 + head_bob_offset2, 164 + head_bob_offset))  # Position above legs with bob
-        surface.blit(self.head_frame, head_rect.topleft)
+        head_image = self.head_frame.copy()
+        head_image.fill(color, special_flags=pygame.BLEND_MULT)
+        head_rect = head_image.get_rect(center=(318 + head_bob_offset2, 164 + head_bob_offset))  # Position above legs with bob
+        surface.blit(head_image, head_rect.topleft)
 
     def draw_footer(self, surface, font, color):
        screen_width, screen_height = surface.get_size()
@@ -121,7 +148,30 @@ class StatPage:
        pygame.draw.rect(surface, get_color('BRIGHT'), (xp_bar_x, xp_bar_y, xp_bar_width, xp_bar_height), 2)
        pygame.draw.rect(surface, get_color('BRIGHT'), (xp_bar_x, xp_bar_y, xp_bar_width * xp_percentage, xp_bar_height))
 
+    def draw_sensors(self, surface, font, color):
+        sensor_data = [
+            ("heart_rate", f"{self.heart_rate} BPM", (460, 150)),  # Near chest
+            ("spo2", f"{self.spo2}%", (460, 220)),  # Near arm
+            ("bac", f"{self.bac} %", (460, 290)),  # Near head
+            ####
+            ("temperature", f"{self.temperature}°F", (20, 120)),  # Near stomach
+            ("humidity", f"{self.humidity}%", (20, 190)),  # Near other arm
+            ("pressure", f"{self.pressure} hPa", (20, 260)),  # Below Vault Boy
+            ("altitude", f"{self.altitude} FT", (20, 330))  # Below Vault Boy
+            
+        ]
+
+        for icon_key, value, (x, y) in sensor_data:
+            rect = pygame.Rect(x, y, 160, 40)  # Smaller rectangular boxes
+            pygame.draw.rect(surface, get_color('DARK'), rect)
+            icon = pygame.transform.scale(self.icons[icon_key], (30, 30))
+            icon.fill(color, special_flags=pygame.BLEND_MULT)
+            surface.blit(icon, (rect.x + 5, rect.y + 5))  # Icon on the left
+            text_surface = self.small_font.render(value, True, color)
+            text_rect = text_surface.get_rect(midleft=(rect.x + 45, rect.centery))  # Text to the right of the icon
+            surface.blit(text_surface, text_rect)
+
     def draw(self, surface, font, color):
-        #self.draw_text(self.content, font, color, surface, 20, 20)
-        self.draw_animation(surface)
+        self.draw_animation(surface, color)
         self.draw_footer(surface, font, color)
+        self.draw_sensors(surface, font, color)

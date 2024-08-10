@@ -40,9 +40,11 @@ class Scanline:
                 self.rect.y = -self.rect.height
                 self.last_move_time = current_time
 
-    def render(self, surface):
+    def render(self, surface, color):
+        tinted_image = self.image.copy()
+        tinted_image.fill(color, special_flags=pygame.BLEND_MULT)
         for _ in range(self.strength):  # Apply the overlay multiple times
-            surface.blit(self.image, self.rect, special_flags=pygame.BLEND_ADD)
+            surface.blit(tinted_image, self.rect, special_flags=pygame.BLEND_ADD)
 
 #CRT Distortion Class
 class CRTShader:
