@@ -15,6 +15,7 @@ from config import *
 
 # Initialize Pygame
 pygame.init()
+pygame.mixer.init()
 
 # Screen setup
 screen = pygame.display.set_mode((CANVAS_WIDTH, CANVAS_HEIGHT))
@@ -22,7 +23,7 @@ pygame.display.set_caption("Pip-Boy Interface")
 
 # Font setup
 font = FreeTechMono[30]
-small_font = FreeTechMono[24]
+small_font = FreeTechMono[18]
 
 # Pages
 pages = ["STAT", "RADIO", "MAP", "DATA"]
@@ -42,7 +43,7 @@ def draw_mouse_position(surface, font, color):
     adjusted_x = mouse_x - OFFSET_X
     adjusted_y = mouse_y - OFFSET_Y
     pos_text = f"X: {adjusted_x}, Y: {adjusted_y}"
-    text_surface, _ = font.render(pos_text, color)
+    text_surface, _ = small_font.render(pos_text, color)
     surface.blit(text_surface, (10, 10))  # Position the text at the top-left corner
 # END MOUSE DEBUG
 
@@ -106,6 +107,8 @@ def main():
                         page_objects[current_page].handle_event(event)
                 elif current_page == pages.index("DATA"):
                     page_objects[current_page].handle_event(event)
+                elif current_page == pages.index("RADIO"):
+                    page_objects[current_page].handle_event(event)
 
         # Create a canvas to render the game screen
         canvas = pygame.Surface((CANVAS_WIDTH, CANVAS_HEIGHT))
@@ -134,13 +137,17 @@ def main():
         canvas.blit(crt_screen, (OFFSET_X, OFFSET_Y))
 
         # Display the mouse position for debugging
-        #draw_mouse_position(canvas, small_font, get_color('BRIGHT'))
+        draw_mouse_position(canvas, small_font, get_color('BRIGHT'))
 
 
         # Display the canvas
         screen.blit(canvas, (0, 0))
         
         pygame.display.flip()
+
+        if current_page == pages.index("RADIO"):
+            page_objects[current_page].update()
+            
         clock.tick(FPS)
 
 if __name__ == "__main__":

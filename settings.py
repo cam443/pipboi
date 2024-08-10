@@ -5,7 +5,9 @@ class Settings:
     def __init__(self):
         self.filename = 'settings.json'
         self.default_settings = {
-            'ui_color': 'GREEN'
+            'ui_color': 'GREEN',
+            'radio_station': None,
+            'radio_volume': 0.5
         }
         self.settings = self.load_settings()
 
@@ -13,14 +15,14 @@ class Settings:
         if os.path.exists(self.filename):
             with open(self.filename, 'r') as f:
                 return json.load(f)
-        return self.default_settings
+        return self.default_settings.copy()
 
     def save_settings(self):
         with open(self.filename, 'w') as f:
             json.dump(self.settings, f)
 
-    def get(self, key):
-        return self.settings.get(key, self.default_settings.get(key))
+    def get(self, key, default=None):
+        return self.settings.get(key, default)
 
     def set(self, key, value):
         self.settings[key] = value
