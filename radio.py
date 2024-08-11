@@ -33,7 +33,7 @@ def precompute_waveform(samples, height, smoothing=10, zoom_factor=1.0):
 class RadioPage:
     def __init__(self):
         self.stations = self.load_stations()
-        self.font = RobotoR[28]
+        self.font = RobotoR[24]
         self.bold = RobotoB[24]
         self.load_state()
         pygame.mixer.init()
@@ -45,13 +45,13 @@ class RadioPage:
         self.current_waveform = None
         self.offset = 0  # Initialize the offset for scrolling
         self.slice_width = SCREEN_WIDTH // 2  # Width of the waveform slice to render
-        self.zoom_factor = 3  # Adjust this value to change the zoom level
+        self.zoom_factor = 15  # Adjust this value to change the zoom level
         self.waveform_height = SCREEN_HEIGHT // 2
         self.right_padding = 20
         self.top_padding = 80  # Adjust this value to move the grid higher
         self.grid_width = 300  # Width of the grid
         self.grid_height = 200  # Height of the grid
-        self.grid_color = get_color('BRIGHT')
+        #get_color('BRIGHT') = get_color('BRIGHT')
         self.clock = pygame.time.Clock()
         self.start_time = 0
 
@@ -155,22 +155,22 @@ class RadioPage:
     def draw_ticks(self, surface, box_x, box_y, box_width, box_height, tick_spacing=25, long_tick_length=10, short_tick_length=5):
         # Draw long ticks on the bottom
         for x in range(box_x, box_x + box_width, tick_spacing):
-            pygame.draw.line(surface, self.grid_color, (x, box_y + box_height), (x, box_y + box_height - long_tick_length), 2)
+            pygame.draw.line(surface, get_color('BRIGHT'), (x, box_y + box_height), (x, box_y + box_height - long_tick_length), 2)
 
         # Draw long ticks on the right
         for y in range(box_y, box_y + box_height, tick_spacing):
-            pygame.draw.line(surface, self.grid_color, (box_x + box_width, y), (box_x + box_width - long_tick_length, y), 2)
+            pygame.draw.line(surface, get_color('BRIGHT'), (box_x + box_width, y), (box_x + box_width - long_tick_length, y), 2)
 
         for x in range(box_x, box_x + box_width, 5):
-            pygame.draw.line(surface, self.grid_color, (x, box_y + box_height), (x, box_y + box_height - short_tick_length), 1)
+            pygame.draw.line(surface, get_color('BRIGHT'), (x, box_y + box_height), (x, box_y + box_height - short_tick_length), 1)
 
         # Draw long ticks on the right
         for y in range(box_y, box_y + box_height, 5):
-            pygame.draw.line(surface, self.grid_color, (box_x + box_width, y), (box_x + box_width - short_tick_length, y), 1)
+            pygame.draw.line(surface, get_color('BRIGHT'), (box_x + box_width, y), (box_x + box_width - short_tick_length, y), 1)
 
         # Draw the main border
-        pygame.draw.line(surface, self.grid_color, (box_x, box_y + box_height), (box_x + box_width, box_y + box_height), 2)
-        pygame.draw.line(surface, self.grid_color, (box_x + box_width, box_y), (box_x + box_width, box_y + box_height), 2)
+        pygame.draw.line(surface, get_color('BRIGHT'), (box_x, box_y + box_height), (box_x + box_width, box_y + box_height), 2)
+        pygame.draw.line(surface, get_color('BRIGHT'), (box_x + box_width, box_y), (box_x + box_width, box_y + box_height), 2)
 
     def draw_waveform(self, surface):
         if self.current_waveform is not None:
@@ -202,7 +202,7 @@ class RadioPage:
                 y1 = box_y + int(self.current_waveform[sample_index] * (box_height / self.waveform_height))
                 y2 = box_y + int(self.current_waveform[next_sample_index] * (box_height / self.waveform_height))
                 
-                pygame.draw.line(surface, self.grid_color,
+                pygame.draw.line(surface, get_color('BRIGHT'),
                                  (box_x + x // self.zoom_factor, y1),
                                  (box_x + (x + 1) // self.zoom_factor, y2), 2)
 
@@ -216,14 +216,15 @@ class RadioPage:
                 text_color = BLACK
             else:
                 text_color = get_color('BRIGHT')
-            self.draw_text(station, font, text_color, surface, rect.x + 10, rect.y + 1)
+            self.draw_text(station, font, text_color, surface, rect.x + 10, rect.y)
             y += 40
 
         # Draw volume bar
-        volume_width = int((self.volume / 100) * (SCREEN_WIDTH // 2 - 120))
-        pygame.draw.rect(surface, get_color('BRIGHT'), (420, y + 75, SCREEN_WIDTH // 2 - 120, 20), 1)
-        pygame.draw.rect(surface, get_color('BRIGHT'), (420, y + 75, volume_width, 20))
-        self.draw_text(f"VOL: {int(self.volume)}", self.bold, get_color('BRIGHT'), surface, 320, y + 71)
+        volume_width = int((self.volume / 100) * (SCREEN_WIDTH // 2 - 110))
+        pygame.draw.rect(surface, get_color('BRIGHT'), (412, 295, SCREEN_WIDTH // 2 - 110, 25), 3)
+        pygame.draw.rect(surface, get_color('BRIGHT'), (412, 295, volume_width, 25))
+        pygame.draw.rect(surface, get_color('BRIGHT'), (320, 295, 90, 25))
+        self.draw_text(f"VOL: {int(self.volume)}", self.bold, BLACK, surface, 322, 293)
 
         self.draw_waveform(surface)
 
