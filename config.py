@@ -30,6 +30,14 @@ OFFSET_X, OFFSET_Y = 80, 0  # Configurable offset values
 FPS = 30
 FULLSCREEN = False
 
+# Map Stuff
+WIDTH, HEIGHT = 400, 300  # Adjust these values to your desired map size
+MAP_ZOOM = 14
+MAP_TYPE = "hybrid"
+MAP_FOCUS = [34.0861534, -117.8854141]  # Example coordinates (San Francisco)
+#API_KEY = "AIzaSyBGLrr7j1P_pMknv1vRbKD4X7xMScWxnzM"  # Replace with your Google Maps API key
+API_KEY = "pk.eyJ1Ijoic2VlbnJlbmRlciIsImEiOiJjbHpzejFwaG4xMmRhMnJwdzNoZjYzMmhjIn0.9iqKEORppuPyqQomr44Szg"  # Replace with your MapBox API key 
+
 pygame.font.init()
 pygame.freetype.init()
 

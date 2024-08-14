@@ -4,6 +4,7 @@ import numpy as np
 import sys
 import time
 import random
+import os
 from stats import StatPage
 from data import DataPage
 from map import MapPage
@@ -17,8 +18,21 @@ from config import *
 pygame.init()
 pygame.mixer.init()
 
+# Detect if running on a Raspberry Pi
+PI = False
+if os.name == "posix":
+    PI = True
+else:
+    PI - False
+
 # Screen setup
 screen = pygame.display.set_mode((CANVAS_WIDTH, CANVAS_HEIGHT))
+
+if not PI:
+    screen = pygame.display.set_mode((CANVAS_WIDTH, CANVAS_HEIGHT))
+else:
+    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.FULLSCREEN)
+
 pygame.display.set_caption("Pip-Boy Interface")
 
 # Font setup
@@ -27,7 +41,12 @@ small_font = FreeTechMono[18]
 
 # Pages
 pages = ["STAT", "RADIO", "MAP", "DATA"]
-page_objects = [StatPage(), RadioPage(), MapPage(), DataPage()]
+page_objects = [
+    StatPage(),
+    RadioPage(),
+    MapPage(WIDTH, HEIGHT, MAP_FOCUS, MAP_ZOOM, MAP_TYPE, API_KEY),
+    DataPage()
+]
 current_page = 0
 
 # Initialize overlay
@@ -54,12 +73,16 @@ def draw_centered_text(text, font_size, color, surface, rect, font_type='RobotoB
     surface.blit(textobj, textrect)
 
 def draw_tabs(surface):
-    tab_width = SCREEN_WIDTH // len(pages)
+    total_tab_width = SCREEN_WIDTH // 1.25  # Use 80% of the screen width for tabs
+    tab_width = total_tab_width // len(pages)
+    start_x = (SCREEN_WIDTH - total_tab_width) // 2  # Center the tabs horizontally
+
     for i, page in enumerate(pages):
         text_color = get_color('BRIGHT')
-        rect = pygame.Rect(i * tab_width, 0, tab_width, 50)
+        rect = pygame.Rect(start_x + i * tab_width, 0, tab_width, 50)
         text_surface = RobotoB[30].render(page, True, text_color)
         text_rect = text_surface.get_rect(center=(rect.centerx, rect.centery))
+        
         surface.blit(text_surface, text_rect)
         
         # Draw underline with arms for the active tab
@@ -75,6 +98,12 @@ def draw_tabs(surface):
         else:
             # Draw a simple horizontal line below inactive tabs
             pygame.draw.line(surface, get_color('BRIGHT'), (rect.left, 50), (rect.right, 50), 3)
+
+    # Draw the underline across the entire screen, excluding the active tab area
+    if current_page != -1:
+        active_rect = pygame.Rect(start_x + current_page * tab_width, 0, tab_width, 50)
+        pygame.draw.line(surface, get_color('BRIGHT'), (0, 50), (active_rect.left, 50), 3)
+        pygame.draw.line(surface, get_color('BRIGHT'), (active_rect.right, 50), (SCREEN_WIDTH, 50), 3)
 
 def draw_interface(surface):
     temp_surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
@@ -109,6 +138,8 @@ def main():
                     page_objects[current_page].handle_event(event)
                 elif current_page == pages.index("RADIO"):
                     page_objects[current_page].handle_event(event)
+                elif current_page == pages.index("MAP"):
+                    page_objects[current_page].handle_event(event)
 
         # Create a canvas to render the game screen
         canvas = pygame.Surface((CANVAS_WIDTH, CANVAS_HEIGHT))
@@ -130,7 +161,11 @@ def main():
         scanline.render(game_screen, get_color('BRIGHT'))
 
         # Apply CRT shader on the game screen
-        crt_screen = crt_shader.apply(game_screen.copy())
+        if not PI:
+            #crt_screen = crt_shader.apply(game_screen.copy())
+            crt_screen = game_screen
+        else:
+            crt_screen = game_screen
 
 
         # Blit the CRT screen onto the canvas with the offset

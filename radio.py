@@ -6,11 +6,14 @@ import numpy as np
 from settings import settings
 from config import *
 from pydub import AudioSegment
+import json
 
 def load_cached_waveform(cache_path):
     if os.path.exists(cache_path):
-        return pygame.image.load(cache_path)
-    return None
+        with open(cache_path, 'r') as f:
+            data = json.load(f)
+        return data['waveform'], data['num_samples'], data['frame_rate'], data['audio_duration']
+    return None, None, None, None
 
 def load_audio(file_path):
     audio = AudioSegment.from_file(file_path)
@@ -50,10 +53,10 @@ class RadioPage:
         self.right_padding = 20
         self.top_padding = 80  # Adjust this value to move the grid higher
         self.grid_width = 300  # Width of the grid
-        self.grid_height = 200  # Height of the grid
-        #get_color('BRIGHT') = get_color('BRIGHT')
+        self.grid_height = 200
         self.clock = pygame.time.Clock()
         self.start_time = 0
+        self.use_pregenerated_waveforms = True  # Flag to switch between pregenerated and live waveforms
 
         if self.current_station:
             self.play_song()
@@ -147,6 +150,15 @@ class RadioPage:
         settings.set('radio_volume', self.volume)
 
     def load_waveform(self, song_path):
+        if self.use_pregenerated_waveforms:
+            cache_path = os.path.join(self.waveform_cache_dir, os.path.splitext(os.path.basename(song_path))[0] + '.json')
+            waveform, num_samples, frame_rate, audio_duration = load_cached_waveform(cache_path)
+            if waveform is not None:
+                self.current_waveform = waveform
+                self.total_samples = num_samples
+                self.audio_duration = audio_duration
+                return
+        # Fallback to live generation if pregenerated waveform is not available
         samples, num_samples, frame_rate, audio_duration = load_audio(song_path)
         self.current_waveform = precompute_waveform(samples, self.waveform_height, smoothing=50, zoom_factor=self.zoom_factor)
         self.total_samples = num_samples
@@ -198,13 +210,14 @@ class RadioPage:
             for x in range(samples_to_display):
                 sample_index = (self.sample_index + x) % len(self.current_waveform)
                 next_sample_index = (sample_index + 1) % len(self.current_waveform)
-                
+
                 y1 = box_y + int(self.current_waveform[sample_index] * (box_height / self.waveform_height))
                 y2 = box_y + int(self.current_waveform[next_sample_index] * (box_height / self.waveform_height))
-                
+
                 pygame.draw.line(surface, get_color('BRIGHT'),
                                  (box_x + x // self.zoom_factor, y1),
                                  (box_x + (x + 1) // self.zoom_factor, y2), 2)
+
 
     def draw(self, surface, font, color):
         # Draw stations list
