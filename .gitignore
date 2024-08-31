@@ -1,1 +1,4 @@
 __pycache__/
+
+# Ignore API key file
+apikey.txt

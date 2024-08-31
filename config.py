@@ -36,8 +36,10 @@ MAP_ZOOM = 14
 LOCAL_ZOOM = 18
 MAP_TYPE = "hybrid"
 MAP_FOCUS = [34.0861534, -117.8854141]  # Example coordinates (San Francisco)
-#API_KEY = "AIzaSyBGLrr7j1P_pMknv1vRbKD4X7xMScWxnzM"  # Replace with your Google Maps API key
-API_KEY = "pk.eyJ1Ijoic2VlbnJlbmRlciIsImEiOiJjbHpzejFwaG4xMmRhMnJwdzNoZjYzMmhjIn0.9iqKEORppuPyqQomr44Szg"  # Replace with your MapBox API key 
+#API_KEY = "  "  # Replace with your Google Maps API key
+#API_KEY = 'apikey.txt'  # Replace with your MapBox API key 
+with open('apikey.txt', 'r') as file:
+    API_KEY = file.read().strip()
 
 pygame.font.init()
 pygame.freetype.init()
