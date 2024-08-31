@@ -1,6 +1,8 @@
 import pygame
 from config import *
 from settings import settings
+from term import HackingGame
+
 
 class DataPage:
     def __init__(self):
@@ -11,8 +13,14 @@ class DataPage:
         self.selected_color = self.color_options.index(settings.get('ui_color'))
         self.color_menu_open = False
         self.color_menu_index = 0
-        self.settings_options = ["UI Color", "Option 2", "Option 3"]  # Add more options as needed
+        self.difficulty_options = ["EASY", "MEDIUM", "HARD"]
+        self.selected_difficulty = self.difficulty_options.index(settings.get('hacking_difficulty', 'MEDIUM'))
+        self.difficulty_menu_open = False
+        self.difficulty_menu_index = 0
+        self.settings_options = ["UI Color", "Hacking Difficulty", "Launch Hacking Game"]  # Add more options as needed
         self.current_setting = 0
+        self.hacking_game = None
+        self.hacking_game_result = None  # None: game not finished, True: won, False: lost
     
     def draw_text(self, text, font, color, surface, x, y):
         textobj = font.render(text, 1, color)
@@ -49,6 +57,9 @@ class DataPage:
                 if option == "UI Color" and self.color_menu_open:
                     bg_color = get_color('DIM')
                     text_color = get_color('BRIGHT')
+                elif option == "Hacking Difficulty" and self.difficulty_menu_open:
+                    bg_color = get_color('DIM')
+                    text_color = get_color('BRIGHT')
                 else:
                     bg_color = get_color('BRIGHT')
                     text_color = BLACK
@@ -66,6 +77,11 @@ class DataPage:
             if option == "UI Color":
                 current_color = self.color_options[self.selected_color]
                 value_text = RobotoB[18].render(current_color, True, text_color)
+                value_rect = value_text.get_rect(right=rect.right - 10, centery=rect.centery)
+                surface.blit(value_text, value_rect)
+            elif option == "Hacking Difficulty":
+                current_difficulty = self.difficulty_options[self.selected_difficulty]
+                value_text = RobotoB[18].render(current_difficulty, True, text_color)
                 value_rect = value_text.get_rect(right=rect.right - 10, centery=rect.centery)
                 surface.blit(value_text, value_rect)    
 
@@ -88,19 +104,45 @@ class DataPage:
                     text_color = get_color('BRIGHT')
                 self.draw_text(color_option, RobotoB[18], text_color, surface, rect.x + 10, rect.y + 1)
 
+        if self.difficulty_menu_open and self.current_setting == self.settings_options.index("Hacking Difficulty"):
+            option_rect = pygame.Rect(20, 100 + self.current_setting * 30, option_width + value_width, 25)
+            for i, difficulty_option in enumerate(self.difficulty_options):
+                if i == 0:
+                    rect = pygame.Rect(option_rect.right + 5, option_rect.y, value_width, 25)
+                else:
+                    rect = pygame.Rect(option_rect.right + 5, option_rect.y + i * 30, value_width, 25)
+                
+                if i == self.difficulty_menu_index:
+                    pygame.draw.rect(surface, get_color('BRIGHT'), rect)
+                    text_color = BLACK
+                else:
+                    pygame.draw.rect(surface, BLACK, rect)
+                    text_color = get_color('BRIGHT')
+                self.draw_text(difficulty_option, RobotoB[18], text_color, surface, rect.x + 10, rect.y + 1)
+
+
     def handle_event(self, event):
-        if event.type == pygame.KEYDOWN:
+        if self.hacking_game:
+            self.hacking_game.handle_event(event)
+            if self.hacking_game.check_game_end():
+                self.hacking_game_result = self.hacking_game.game_won
+                self.hacking_game = None
+        elif event.type == pygame.KEYDOWN:
             if event.key in [pygame.K_1, pygame.K_2]:
                 self.current_sub_tab = event.key - pygame.K_1
             elif self.current_sub_tab == 1:  # SETTINGS tab
                 if event.key == pygame.K_UP:
                     if self.color_menu_open:
                         self.color_menu_index = (self.color_menu_index - 1) % len(self.color_options)
+                    elif self.difficulty_menu_open:
+                        self.difficulty_menu_index = (self.difficulty_menu_index - 1) % len(self.difficulty_options)
                     else:
                         self.current_setting = (self.current_setting - 1) % len(self.settings_options)
                 elif event.key == pygame.K_DOWN:
                     if self.color_menu_open:
                         self.color_menu_index = (self.color_menu_index + 1) % len(self.color_options)
+                    elif self.difficulty_menu_open:
+                        self.difficulty_menu_index = (self.difficulty_menu_index + 1) % len(self.difficulty_options)
                     else:
                         self.current_setting = (self.current_setting + 1) % len(self.settings_options)
                 elif event.key == pygame.K_RETURN:
@@ -111,10 +153,38 @@ class DataPage:
                             self.selected_color = self.color_menu_index
                             settings.set('ui_color', self.color_options[self.selected_color])
                             self.color_menu_open = False
+                    elif self.settings_options[self.current_setting] == "Hacking Difficulty":
+                        if not self.difficulty_menu_open:
+                            self.difficulty_menu_open = True
+                        else:
+                            self.selected_difficulty = self.difficulty_menu_index
+                            settings.set('hacking_difficulty', self.difficulty_options[self.selected_difficulty])
+                            self.difficulty_menu_open = False
+                    elif self.settings_options[self.current_setting] == "Launch Hacking Game":
+                        difficulty = self.difficulty_options[self.selected_difficulty]
+                        self.hacking_game = HackingGame(difficulty)
+                        self.hacking_game_active = True
 
     def draw(self, surface, font, color):
-        self.draw_sub_tabs(surface, font, color)
-        if self.current_sub_tab == 0:
-            self.draw_text(self.content, font, color, surface, 20, 100)
+        if self.hacking_game:
+            self.hacking_game.draw(surface)
+            if self.hacking_game.check_game_end():
+                self.hacking_game_result = self.hacking_game.game_won
+                self.hacking_game = None
         else:
-            self.draw_settings(surface, font, color)
+            self.draw_sub_tabs(surface, font, color)
+            if self.current_sub_tab == 0:
+                self.draw_text(self.content, font, color, surface, 20, 100)
+            else:
+                self.draw_settings(surface, font, color)
+    
+    def update(self):
+        if self.hacking_game:
+            if self.hacking_game.check_game_end():
+                self.hacking_game_result = self.hacking_game.game_won
+                self.hacking_game = None
+
+    def get_hacking_game_result(self):
+        result = self.hacking_game_result
+        self.hacking_game_result = None
+        return result

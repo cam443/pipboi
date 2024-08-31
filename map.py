@@ -142,10 +142,26 @@ class Map:
 
 class MapPage:
     def __init__(self, width, height, focus, zoom, map_type, api_key):
-        self.map = Map(SCREEN_WIDTH, SCREEN_HEIGHT - 50, focus, zoom, map_type, api_key)
-        self.container = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT - 50), pygame.SRCALPHA)
-        self.container_rect = self.container.get_rect(top=50)  # Position below the tab underline
-        self.feather_mask = self.create_feather_mask(SCREEN_WIDTH, SCREEN_HEIGHT - 50)
+        self.world_map = Map(SCREEN_WIDTH, SCREEN_HEIGHT - 70, focus, zoom, map_type, api_key)
+        self.local_map = Map(SCREEN_WIDTH, SCREEN_HEIGHT - 70, focus, zoom + 3, map_type, api_key)
+        self.container = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT - 70), pygame.SRCALPHA)
+        self.container_rect = self.container.get_rect(top=70)  # Position below the tab underline
+        self.feather_mask = self.create_feather_mask(SCREEN_WIDTH, SCREEN_HEIGHT - 70)
+        self.sub_tabs = ["WORLD MAP", "LOCAL MAP"]
+        self.current_sub_tab = 0
+        self.local_map_focus = [37.7749, -122.4194]  # Hardcoded GPS coordinates 
+        self.local_map_needs_update = True
+        self.player_indicator = self.create_player_indicator()
+        self.player_direction = 0  # 0 degrees is North, 90 is East, 180 is South, 270 is West
+
+    def create_player_indicator(self):
+        indicator = pygame.Surface((33, 49), pygame.SRCALPHA)
+        arrow = pygame.image.load('images/icons/Player_Marker.png').convert_alpha()
+        indicator.blit(arrow, (0, 0))
+        return indicator
+    
+    def rotate_player_indicator(self):
+        return pygame.transform.rotate(self.player_indicator, -self.player_direction)
 
     def create_feather_mask(self, width, height, edge_width=50):
         mask = pygame.Surface((width, height), pygame.SRCALPHA)
@@ -163,16 +179,50 @@ class MapPage:
                 mask.set_at((x, y), (255, 255, 255, alpha))
         return mask
 
+    def draw_sub_tabs(self, surface, font, color):
+        tab_width = SCREEN_WIDTH // 4.5  # Adjust this value to change the spacing between tabs
+        for i, tab in enumerate(self.sub_tabs):
+            x = 20 + i * tab_width  # Start 20 pixels from the left edge
+            y = 60  # Keep the vertical position the same
+
+            if i == self.current_sub_tab:
+                text_color = get_color('BRIGHT')
+                tab_font = RobotoB[24]
+            else:
+                text_color = get_color('DIM')
+                tab_font = RobotoR[24]
+
+            text_surface = tab_font.render(tab, True, text_color)
+            text_rect = text_surface.get_rect(left=x, top=y)
+            surface.blit(text_surface, text_rect)
+
     def draw(self, surface, font, color):
+        self.draw_sub_tabs(surface, font, color)
+        
         # Clear the container
         self.container.fill((0, 0, 0, 0))  # Fill with transparent color
         
-        # Create a copy of the map surface and apply the color overlay
-        colored_map = self.map.surface.copy()
-        colored_map.fill(color, special_flags=pygame.BLEND_MULT)
+        if self.current_sub_tab == 0:  # World Map
+            current_map = self.world_map
+        else:  # Local Map
+            current_map = self.local_map
+            if self.local_map_needs_update:
+                self.local_map.focus = self.local_map_focus
+                self.local_map.update_map()
+                self.local_map_needs_update = False
         
-        # Draw the colored map onto the container
-        self.container.blit(colored_map, (0, 0))
+        # Draw the map onto the container
+        self.container.blit(current_map.surface, (0, 0))
+        
+        # Draw player indicator on local map
+        if self.current_sub_tab == 1:  # Local Map
+            rotated_indicator = self.rotate_player_indicator()
+            indicator_pos = (self.container.get_width() // 2 - rotated_indicator.get_width() // 2,
+                             self.container.get_height() // 2 - rotated_indicator.get_height() // 2)
+            self.container.blit(rotated_indicator, indicator_pos)
+        
+        # Apply the color overlay to the entire container
+        self.container.fill(color, special_flags=pygame.BLEND_MULT)
         
         # Apply the feather mask to the container
         self.container.blit(self.feather_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
@@ -182,15 +232,44 @@ class MapPage:
 
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_PLUS or event.key == pygame.K_EQUALS:  # Zoom in
-                self.map.zoom_in()
-            elif event.key == pygame.K_MINUS:  # Zoom out
-                self.map.zoom_out()
-            elif event.key == pygame.K_LEFT:  # Pan left
-                self.map.pan(-1, 0)
-            elif event.key == pygame.K_RIGHT:  # Pan right
-                self.map.pan(1, 0)
-            elif event.key == pygame.K_UP:  # Pan up
-                self.map.pan(0, -1)
-            elif event.key == pygame.K_DOWN:  # Pan down
-                self.map.pan(0, 1)
+            if event.key == pygame.K_1:
+                self.current_sub_tab = 0
+                print("Switched to World Map tab")  # Debug print
+            elif event.key == pygame.K_2:
+                self.current_sub_tab = 1
+                self.local_map_needs_update = True
+                print("Switched to Local Map tab")  # Debug print
+            
+            if self.current_sub_tab == 0:  # World Map tab
+                if event.key == pygame.K_PLUS or event.key == pygame.K_EQUALS:  # Zoom in
+                    self.world_map.zoom_in()
+                elif event.key == pygame.K_MINUS:  # Zoom out
+                    self.world_map.zoom_out()
+                elif event.key == pygame.K_LEFT:  # Pan left
+                    self.world_map.pan(-1, 0)
+                elif event.key == pygame.K_RIGHT:  # Pan right
+                    self.world_map.pan(1, 0)
+                elif event.key == pygame.K_UP:  # Pan up
+                    self.world_map.pan(0, -1)
+                elif event.key == pygame.K_DOWN:  # Pan down
+                    self.world_map.pan(0, 1)
+            elif self.current_sub_tab == 1:  # Local Map tab
+                if event.key == pygame.K_PLUS or event.key == pygame.K_EQUALS:  # Zoom in
+                    self.local_map.zoom_in()
+                elif event.key == pygame.K_MINUS:  # Zoom out
+                    self.local_map.zoom_out()
+                elif event.key == pygame.K_LEFT:  # Rotate left
+                    self.update_player_direction(self.player_direction - 15)
+                elif event.key == pygame.K_RIGHT:  # Rotate right
+                    self.update_player_direction(self.player_direction + 15)
+
+        print(f"Current sub-tab: {self.current_sub_tab}")  # Debug print
+
+    #To update coords, use: map_page.update_local_map_focus([new_latitude, new_longitude])
+    def update_local_map_focus(self, new_focus):
+        self.local_map_focus = new_focus
+        self.local_map_needs_update = True
+    def update_player_direction(self, new_direction):
+        self.player_direction = new_direction
+        # Ensure the direction is between 0 and 359
+        self.player_direction %= 360

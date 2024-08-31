@@ -7,6 +7,9 @@ from settings import settings
 from config import *
 from pydub import AudioSegment
 import json
+import threading
+from collections import deque
+
 
 def load_cached_waveform(cache_path):
     if os.path.exists(cache_path):
@@ -56,8 +59,10 @@ class RadioPage:
         self.grid_height = 200
         self.clock = pygame.time.Clock()
         self.start_time = 0
-        self.use_pregenerated_waveforms = True  # Flag to switch between pregenerated and live waveforms
-
+        self.use_pregenerated_waveforms = False  # Flag to switch between pregenerated and live waveforms
+        self.waveform_thread = None
+        self.waveform_ready = threading.Event()
+        self.current_waveform = deque()  # Use deque for waveform data
         if self.current_station:
             self.play_song()
 
@@ -150,19 +155,27 @@ class RadioPage:
         settings.set('radio_volume', self.volume)
 
     def load_waveform(self, song_path):
+        self.waveform_ready.clear()
+        self.waveform_thread = threading.Thread(target=self.generate_waveform, args=(song_path,))
+        self.waveform_thread.start()
+
+    def generate_waveform(self, song_path):
         if self.use_pregenerated_waveforms:
-            cache_path = os.path.join(self.waveform_cache_dir, os.path.splitext(os.path.basename(song_path))[0] + '.json')
-            waveform, num_samples, frame_rate, audio_duration = load_cached_waveform(cache_path)
-            if waveform is not None:
-                self.current_waveform = waveform
-                self.total_samples = num_samples
-                self.audio_duration = audio_duration
+            cache_path = os.path.join(self.waveform_cache_dir, os.path.splitext(os.path.basename(song_path))[0] + '.npy')
+            if os.path.exists(cache_path):
+                with open(cache_path, 'rb') as f:
+                    data = np.load(f, allow_pickle=True).item()
+                self.current_waveform = data['waveform']
+                self.total_samples = data['num_samples']
+                self.audio_duration = data['audio_duration']
+                self.waveform_ready.set()
                 return
         # Fallback to live generation if pregenerated waveform is not available
         samples, num_samples, frame_rate, audio_duration = load_audio(song_path)
         self.current_waveform = precompute_waveform(samples, self.waveform_height, smoothing=50, zoom_factor=self.zoom_factor)
         self.total_samples = num_samples
         self.audio_duration = audio_duration
+        self.waveform_ready.set()
 
     def draw_ticks(self, surface, box_x, box_y, box_width, box_height, tick_spacing=25, long_tick_length=10, short_tick_length=5):
         # Draw long ticks on the bottom
@@ -185,38 +198,37 @@ class RadioPage:
         pygame.draw.line(surface, get_color('BRIGHT'), (box_x + box_width, box_y), (box_x + box_width, box_y + box_height), 2)
 
     def draw_waveform(self, surface):
-        if self.current_waveform is not None:
-            # Calculate the current position in the song
-            current_time = (pygame.time.get_ticks() - self.start_time) / 1000.0
-            if current_time > self.audio_duration:
-                current_time = current_time % self.audio_duration
+        if not self.waveform_ready.is_set():
+            return  # Do not draw until waveform is ready
 
-            # Calculate the current sample index based on the audio position
-            self.sample_index = int((current_time / self.audio_duration) * len(self.current_waveform))
+        # Calculate the current position in the song
+        current_time = (pygame.time.get_ticks() - self.start_time) / 1000.0
+        if current_time > self.audio_duration:
+            current_time = current_time % self.audio_duration
 
-            # Draw the graph box
-            box_x = SCREEN_WIDTH // 2
-            box_y = self.top_padding
-            box_width = self.grid_width
-            box_height = self.grid_height
+        # Calculate the current sample index based on the audio position
+        self.sample_index = int((current_time / self.audio_duration) * len(self.current_waveform))
 
-            # Draw the ticks
-            self.draw_ticks(surface, box_x, box_y, box_width, box_height)
+        # Calculate the number of samples to display in the slice based on the zoom factor
+        samples_per_pixel = int(self.zoom_factor)
+        slice_start = self.sample_index
+        slice_end = slice_start + (self.slice_width * samples_per_pixel)
 
-            # Calculate the number of samples to display
-            samples_to_display = int((box_width - self.right_padding) * self.zoom_factor)
+        # Draw the waveform inside the box
+        box_x = SCREEN_WIDTH // 2
+        box_y = self.top_padding
+        box_width = self.grid_width 
+        box_height = self.grid_height
 
-            # Draw the waveform inside the box
-            for x in range(samples_to_display):
-                sample_index = (self.sample_index + x) % len(self.current_waveform)
-                next_sample_index = (sample_index + 1) % len(self.current_waveform)
-
-                y1 = box_y + int(self.current_waveform[sample_index] * (box_height / self.waveform_height))
-                y2 = box_y + int(self.current_waveform[next_sample_index] * (box_height / self.waveform_height))
-
-                pygame.draw.line(surface, get_color('BRIGHT'),
-                                 (box_x + x // self.zoom_factor, y1),
-                                 (box_x + (x + 1) // self.zoom_factor, y2), 2)
+        prev_x, prev_y = box_x, box_y + int(self.current_waveform[slice_start] * (box_height / self.waveform_height))
+        for i in range(self.slice_width - 25):
+            x = box_x + i
+            sample_idx = slice_start + (i * samples_per_pixel)
+            if sample_idx >= len(self.current_waveform):
+                break
+            y = box_y + int(self.current_waveform[sample_idx] * (box_height / self.waveform_height))
+            pygame.draw.line(surface, get_color('BRIGHT'), (prev_x, prev_y), (x, y), 3)
+            prev_x, prev_y = x, y
 
 
     def draw(self, surface, font, color):
@@ -238,6 +250,15 @@ class RadioPage:
         pygame.draw.rect(surface, get_color('BRIGHT'), (412, 295, volume_width, 25))
         pygame.draw.rect(surface, get_color('BRIGHT'), (320, 295, 90, 25))
         self.draw_text(f"VOL: {int(self.volume)}", self.bold, BLACK, surface, 322, 293)
+
+        # Draw the graph box
+        box_x = SCREEN_WIDTH // 2
+        box_y = self.top_padding
+        box_width = self.grid_width
+        box_height = self.grid_height
+
+        # Draw the ticks
+        self.draw_ticks(surface, box_x, box_y, box_width, box_height)
 
         self.draw_waveform(surface)
 

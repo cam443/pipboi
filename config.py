@@ -31,8 +31,9 @@ FPS = 30
 FULLSCREEN = False
 
 # Map Stuff
-WIDTH, HEIGHT = 400, 300  # Adjust these values to your desired map size
+WIDTH, HEIGHT = 400, 280  # Adjust these values to your desired map size
 MAP_ZOOM = 14
+LOCAL_ZOOM = 18
 MAP_TYPE = "hybrid"
 MAP_FOCUS = [34.0861534, -117.8854141]  # Example coordinates (San Francisco)
 #API_KEY = "AIzaSyBGLrr7j1P_pMknv1vRbKD4X7xMScWxnzM"  # Replace with your Google Maps API key

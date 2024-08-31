@@ -54,7 +54,7 @@ overlay = Overlay('images/overlay.png', SCREEN_WIDTH, SCREEN_HEIGHT, strength=1,
 underlay = Overlay('images/overlay_dark.png', SCREEN_WIDTH, SCREEN_HEIGHT, strength=1, scale_factor=2)
 
 # Initialize scanline
-scanline = Scanline('images/scanline.png', SCREEN_WIDTH, 60, SCREEN_HEIGHT, speed=3, delay=1.05)
+scanline = Scanline('images/scanline.png', SCREEN_WIDTH, 60, SCREEN_HEIGHT, speed=1, delay=1.05)
 
 # MOUSE DEBUG
 def draw_mouse_position(surface, font, color):
@@ -134,12 +134,21 @@ def main():
                 elif event.key in [pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4]:
                     if current_page == pages.index("DATA"):
                         page_objects[current_page].handle_event(event)
+                    elif current_page == pages.index("MAP"):
+                        page_objects[current_page].handle_event(event)
                 elif current_page == pages.index("DATA"):
                     page_objects[current_page].handle_event(event)
                 elif current_page == pages.index("RADIO"):
                     page_objects[current_page].handle_event(event)
                 elif current_page == pages.index("MAP"):
                     page_objects[current_page].handle_event(event)
+
+        # Check for hacking game result
+        if current_page == pages.index("DATA"):
+            hacking_result = page_objects[current_page].get_hacking_game_result()
+            if hacking_result is True:
+                current_page = pages.index("STAT")
+            # If hacking_result is False, we stay on the DATA page
 
         # Create a canvas to render the game screen
         canvas = pygame.Surface((CANVAS_WIDTH, CANVAS_HEIGHT))
@@ -167,13 +176,11 @@ def main():
         else:
             crt_screen = game_screen
 
-
         # Blit the CRT screen onto the canvas with the offset
         canvas.blit(crt_screen, (OFFSET_X, OFFSET_Y))
 
         # Display the mouse position for debugging
         draw_mouse_position(canvas, small_font, get_color('BRIGHT'))
-
 
         # Display the canvas
         screen.blit(canvas, (0, 0))
@@ -181,6 +188,9 @@ def main():
         pygame.display.flip()
 
         if current_page == pages.index("RADIO"):
+            page_objects[current_page].update()
+        
+        if current_page == pages.index("DATA"):
             page_objects[current_page].update()
             
         clock.tick(FPS)

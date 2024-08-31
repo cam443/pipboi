@@ -7,7 +7,8 @@ class Settings:
         self.default_settings = {
             'ui_color': 'GREEN',
             'radio_station': None,
-            'radio_volume': 0.5
+            'radio_volume': 0.5,
+            'hacking_difficulty': 'MEDIUM'
         }
         self.settings = self.load_settings()
 
