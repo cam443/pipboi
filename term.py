@@ -1,12 +1,19 @@
 import pygame
 import random
 import string
+import os
 from config import *
 
 class HackingGame:
     def __init__(self, difficulty='MEDIUM'):
         self.font = TechMono[16]
         self.CHAR_WIDTH, self.CHAR_HEIGHT = self.font.size('X')
+
+        pygame.mixer.init()
+        self.burst_sounds_a = self.load_sounds('sounds/pipboy/BurstDriveA')
+        self.burst_sounds_b = self.load_sounds('sounds/pipboy/BurstDriveB')
+        self.last_sound_time = 0
+        self.sound_interval = 100  # Milliseconds between sound effects
         
         # Set word length based on difficulty
         if difficulty == 'EASY':
@@ -56,6 +63,14 @@ class HackingGame:
         self.last_type_time = 0
         self.visible_lines = 20
 
+    def load_sounds(self, folder_path):
+        sounds = []
+        for filename in os.listdir(folder_path):
+            if filename.endswith('.ogg'):
+                sound_path = os.path.join(folder_path, filename)
+                sounds.append(pygame.mixer.Sound(sound_path))
+        return sounds
+
     def load_words_from_file(self, file_path, word_length):
         with open(file_path, 'r') as file:
             words = [line.strip().upper() for line in file if len(line.strip()) == word_length]
@@ -96,11 +111,13 @@ class HackingGame:
         return memory_dump, word_positions
     
     def draw_lose_animation(self, surface):
+        current_time = pygame.time.get_ticks()
+
         if not hasattr(self, 'fall_speeds'):
             self.init_lose_animation(surface)
 
         surface.fill(BLACK)
-        
+
         animation_done = True
         for col in range(self.total_cols):
             if self.fall_positions[col] < self.total_rows:
@@ -108,41 +125,49 @@ class HackingGame:
                 for row in range(self.total_rows):
                     x = col * (self.CHAR_WIDTH + 2)
                     y = row * (self.CHAR_HEIGHT + 2)
-                    
+
                     if row < self.fall_positions[col]:
                         char = '.'
                     else:
                         char_index = (col * self.total_rows + row) % len(self.memory_dump)
                         char = self.memory_dump[char_index]
-                    
+
                     color = get_color('BRIGHT') if row >= self.fall_positions[col] else get_color('DIM')
                     char_surface = self.font.render(char, True, color)
                     surface.blit(char_surface, (x, y))
-                
+
                 self.fall_positions[col] += self.fall_speeds[col]
-        
+
         self.animation_timer += 1
-        
+
         # Type out "TERMINAL LOCKED" message on two lines
         message1 = "TERMINAL LOCKED"
         message2 = "PLEASE CONTACT AN ADMINISTRATOR"
         typed_chars = min(len(message1) + len(message2), self.animation_timer // 1)
-        
+
         if typed_chars <= len(message1):
             typed_message1 = message1[:typed_chars]
             typed_message2 = ""
         else:
             typed_message1 = message1
             typed_message2 = message2[:typed_chars - len(message1)]
-        
+
         text_surface1 = self.font.render(typed_message1, True, get_color('BRIGHT'))
         text_rect1 = text_surface1.get_rect(center=(surface.get_width() // 2, surface.get_height() // 2 - self.CHAR_HEIGHT))
         surface.blit(text_surface1, text_rect1)
-        
+
         text_surface2 = self.font.render(typed_message2, True, get_color('BRIGHT'))
         text_rect2 = text_surface2.get_rect(center=(surface.get_width() // 2, surface.get_height() // 2 + self.CHAR_HEIGHT))
         surface.blit(text_surface2, text_rect2)
-        
+
+        # Play sound effect
+        if current_time - self.last_sound_time > self.sound_interval and typed_chars < len(message1) + len(message2):
+            if random.choice([True, False]):
+                random.choice(self.burst_sounds_a).play()
+            else:
+                random.choice(self.burst_sounds_b).play()
+            self.last_sound_time = current_time
+
         if animation_done and typed_chars == len(message1) + len(message2) and self.animation_timer > (len(message1) + len(message2)) * 3 + 60:
             self.end_animation_done = True
 
@@ -160,24 +185,33 @@ class HackingGame:
 
     def draw_win_animation(self, surface):
         current_time = pygame.time.get_ticks()
-        
+
         if self.boot_sequence_index < len(self.boot_sequence):
             if not self.boot_text:
                 self.boot_timer = current_time
-            
+
             if current_time - self.last_type_time > 1:  # Check every frame
                 if len(self.boot_text) < len(self.boot_sequence[self.boot_sequence_index]):
                     chars_to_add = min(self.chars_per_frame, 
                                        len(self.boot_sequence[self.boot_sequence_index]) - len(self.boot_text))
                     self.boot_text += self.boot_sequence[self.boot_sequence_index][len(self.boot_text):len(self.boot_text) + chars_to_add]
                     self.last_type_time = current_time
+
+                    # Play sound effect
+                    if current_time - self.last_sound_time > self.sound_interval:
+                        if random.choice([True, False]):
+                            random.choice(self.burst_sounds_a).play()
+                        else:
+                            random.choice(self.burst_sounds_b).play()
+                        self.last_sound_time = current_time
+
                 elif current_time - self.last_type_time > self.line_delay:
                     self.boot_sequence_index += 1
                     self.boot_text = ""
                     self.chars_per_frame = random.randint(1, 3)  # Randomize typing speed for each line
-        
+
         self.render_boot_screen(surface)
-        
+
         if self.boot_sequence_index == len(self.boot_sequence) and current_time - self.last_type_time > 2000:
             self.end_animation_done = True
 

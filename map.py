@@ -5,13 +5,14 @@ import numpy as np
 from config import *
 
 class Map:
-    def __init__(self, width, height, focus, zoom, map_type, api_key):
+    def __init__(self, width, height, focus, zoom, map_type, api_key, style):
         self.width = width
         self.height = height
         self.focus = list(focus)  # Convert to list for mutability
         self.zoom = zoom
         self.map_type = map_type
         self.api_key = api_key
+        self.style = style  # Add this line
         self.surface = pygame.Surface((self.width, self.height))
         self.offset_x = 0
         self.offset_y = 0
@@ -19,7 +20,7 @@ class Map:
 
     def fetch_map(self):
         lat, long = str(self.focus[0]), str(self.focus[1])
-        url = (f"https://api.mapbox.com/styles/v1/seenrender/clzu78tql00i801r5a3wzb9rs/static/"
+        url = (f"https://api.mapbox.com/styles/v1/seenrender/{self.style}/static/"  # Update this line
                f"{long},{lat},{self.zoom},0/{self.width}x{self.height}?access_token={self.api_key}")
         
         print(f"Fetching map from URL: {url}")
@@ -142,8 +143,8 @@ class Map:
 
 class MapPage:
     def __init__(self, width, height, focus, zoom, map_type, api_key):
-        self.world_map = Map(SCREEN_WIDTH, SCREEN_HEIGHT - 70, focus, zoom, map_type, api_key)
-        self.local_map = Map(SCREEN_WIDTH, SCREEN_HEIGHT - 70, focus, zoom + 3, map_type, api_key)
+        self.world_map = Map(SCREEN_WIDTH, SCREEN_HEIGHT - 70, focus, zoom, map_type, api_key, WORLD_STYLE)
+        self.local_map = Map(SCREEN_WIDTH, SCREEN_HEIGHT - 70, focus, zoom + 3, map_type, api_key, LOCAL_STYLE)
         self.container = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT - 70), pygame.SRCALPHA)
         self.container_rect = self.container.get_rect(top=70)  # Position below the tab underline
         self.feather_mask = self.create_feather_mask(SCREEN_WIDTH, SCREEN_HEIGHT - 70)

@@ -72,28 +72,40 @@ class StatPage:
             "bac": pygame.image.load('images/icons/bac.png').convert_alpha()
         }
 
-    def update_hp_from_serial(self):
+    def update_sensors_from_serial(self):
         try:
             if self.serial_port and self.serial_port.in_waiting > 0:
                 try:
                     line = self.serial_port.readline().decode('utf-8').strip()
-                    if "HR=" in line:
-                        try:
-                            heart_rate = int(line.split("HR=")[1])
-                            self.heart_rate = heart_rate  # Update hp with heart rate value
-                            self.last_heart_rate = heart_rate  # Store the last valid heart rate
-                            print(f"HeartRate: {heart_rate}") # Debugging
-                        except ValueError:
-                            pass
-                except serial.SerialException:
-                    self.serial_port = None  # Handle case where serial port is lost
+                    data = line.split(', ')
+                    for item in data:
+                        key, value = item.split(': ')
+                        if key == 'Temp':
+                            self.temperature = float(value.split()[0])
+                        elif key == 'Humidity':
+                            self.humidity = float(value.split()[0])
+                        elif key == 'Pressure':
+                            self.pressure = float(value.split()[0])
+                        elif key == 'Altitude':
+                            self.altitude = float(value.split()[0])
+                        elif key == 'IR':
+                            pass  # We don't need to store this value
+                        elif key == 'BPM':
+                            self.heart_rate = float(value)
+                        elif key == 'Avg BPM':
+                            pass  # We don't need to store this value
+                        elif key == 'BAC':
+                            self.bac = float(value.rstrip('%'))
+    
+                    print(f"Updated sensor values: Temp={self.temperature}°F, Humidity={self.humidity}%, "
+                          f"Pressure={self.pressure} inHg, Altitude={self.altitude} ft, "
+                          f"HR={self.heart_rate} BPM, BAC={self.bac}%")
+    
+                except (ValueError, IndexError) as e:
+                    print(f"Error parsing sensor data: {e}")
         except (serial.SerialException, OSError) as e:
             self.serial_port = None  # Handle case where serial port is lost
-        finally:
-            if not self.serial_port:
-                self.heart_rate = self.last_heart_rate  # Use the last valid heart rate if serial port is not available
-
-
+            print(f"Serial port error: {e}")
 
     def resize_images(self):
         supersample_factor = self.supersample_factor
@@ -205,15 +217,12 @@ class StatPage:
 
     def draw_sensors(self, surface, font, color):
         sensor_data = [
-            ("heart_rate", f"{self.heart_rate} BPM", (460, 150)),  # Near chest
-            ("spo2", f"{self.spo2}%", (460, 220)),  # Near arm
-            ("bac", f"{self.bac} %", (460, 290)),  # Near head
-            ####
-            ("temperature", f"{self.temperature}°F", (20, 120)),  # Near stomach
-            ("humidity", f"{self.humidity}%", (20, 190)),  # Near other arm
-            ("pressure", f"{self.pressure} hPa", (20, 260)),  # Below Vault Boy
-            ("altitude", f"{self.altitude} FT", (20, 330))  # Below Vault Boy
-            
+            ("heart_rate", f"{self.heart_rate:.1f} BPM", (460, 150)),
+            ("temperature", f"{self.temperature:.1f}°F", (20, 120)),
+            ("humidity", f"{self.humidity:.1f}%", (20, 190)),
+            ("pressure", f"{self.pressure:.2f} inHg", (20, 260)),
+            ("altitude", f"{self.altitude:.0f} FT", (20, 330)),
+            ("bac", f"{self.bac:.4f}%", (460, 290))
         ]
 
         for icon_key, value, (x, y) in sensor_data:
@@ -227,7 +236,7 @@ class StatPage:
             surface.blit(text_surface, text_rect)
 
     def draw(self, surface, font, color):
-        self.update_hp_from_serial()  # Update hp before drawing
+        self.update_sensors_from_serial()  # Update all sensor data before drawing
         self.draw_animation(surface, color)
         self.draw_footer(surface, font, color)
         self.draw_sensors(surface, font, color)

@@ -18,6 +18,20 @@ from config import *
 pygame.init()
 pygame.mixer.init()
 
+# Load sound effects
+def load_sound(file):
+    sound = pygame.mixer.Sound(os.path.join('sounds', 'pipboy', file))
+    sound.set_volume(0.7)  # Adjust this value (0.0 to 1.0) to set the volume
+    return sound
+
+horizontal_sounds = [load_sound(f'RotaryHorizontal/{file}') for file in os.listdir('sounds/pipboy/RotaryHorizontal') if file.endswith('.ogg')]
+vertical_sounds = [load_sound(f'RotaryVertical/{file}') for file in os.listdir('sounds/pipboy/RotaryVertical') if file.endswith('.ogg')]
+select_sound = load_sound('UI_Pipboy_OK.ogg')
+burst_static_sounds = [load_sound(f'BurstStatic/{file}') for file in os.listdir('sounds/pipboy/BurstStatic') if file.endswith('.ogg')]
+
+def play_random_sound(sound_list):
+    random.choice(sound_list).play()
+
 # Detect if running on a Raspberry Pi
 PI = False
 if os.name == "posix":
@@ -31,7 +45,8 @@ screen = pygame.display.set_mode((CANVAS_WIDTH, CANVAS_HEIGHT))
 if not PI:
     screen = pygame.display.set_mode((CANVAS_WIDTH, CANVAS_HEIGHT))
 else:
-    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.FULLSCREEN)
+    #screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.FULLSCREEN)
+    screen = pygame.display.set_mode((CANVAS_WIDTH, CANVAS_HEIGHT))
 
 pygame.display.set_caption("Pip-Boy Interface")
 
@@ -65,6 +80,13 @@ def draw_mouse_position(surface, font, color):
     text_surface, _ = small_font.render(pos_text, color)
     surface.blit(text_surface, (10, 10))  # Position the text at the top-left corner
 # END MOUSE DEBUG
+
+def draw_fps(surface, font, color, clock):
+    fps = int(clock.get_fps())
+    fps_text = f"FPS: {fps}"
+    fps_surface, _ = small_font.render(fps_text, color)
+    surface.blit(fps_surface, (10, 30))  # Position below the mouse coordinates
+# FPS DEBUG
 
 def draw_centered_text(text, font_size, color, surface, rect, font_type='RobotoB'):
     font = globals()[font_type][font_size]
@@ -122,33 +144,62 @@ def main():
     global current_page
     clock = pygame.time.Clock()
     crt_shader = CRTShader((SCREEN_WIDTH, SCREEN_HEIGHT))
+
+    last_radio_update = 0
+    radio_update_interval = 100  # Update every 100ms
     
     while True:
+        current_time = pygame.time.get_ticks()
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
+                print(f"Key pressed: {pygame.key.name(event.key)}")  # Debug statement
                 if event.key in [pygame.K_F1, pygame.K_F2, pygame.K_F3, pygame.K_F4]:
+                    play_random_sound(burst_static_sounds)
                     current_page = event.key - pygame.K_F1
+                    play_random_sound(horizontal_sounds)
                 elif event.key in [pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4]:
+                    print(f"Switched to page: {pages[current_page]}")  # Debug statement
+                    play_random_sound(burst_static_sounds)
+                    play_random_sound(vertical_sounds)
                     if current_page == pages.index("DATA"):
                         page_objects[current_page].handle_event(event)
                     elif current_page == pages.index("MAP"):
                         page_objects[current_page].handle_event(event)
-                elif current_page == pages.index("DATA"):
-                    page_objects[current_page].handle_event(event)
-                elif current_page == pages.index("RADIO"):
-                    page_objects[current_page].handle_event(event)
-                elif current_page == pages.index("MAP"):
-                    page_objects[current_page].handle_event(event)
+                elif event.key in [pygame.K_UP, pygame.K_DOWN]:
+                    play_random_sound(vertical_sounds)
+                    if current_page == pages.index("DATA"):
+                        page_objects[current_page].handle_event(event)
+                    elif current_page == pages.index("RADIO"):
+                        page_objects[current_page].handle_event(event)
+                    elif current_page == pages.index("MAP"):
+                        page_objects[current_page].handle_event(event)
+                elif event.key in [pygame.K_LEFT, pygame.K_RIGHT]:
+                    play_random_sound(horizontal_sounds)
+                    if current_page == pages.index("DATA"):
+                        page_objects[current_page].handle_event(event)
+                    elif current_page == pages.index("RADIO"):
+                        page_objects[current_page].handle_event(event)
+                    elif current_page == pages.index("MAP"):
+                        page_objects[current_page].handle_event(event)
+                elif event.key == pygame.K_RETURN:
+                    select_sound.play()
+                    if current_page == pages.index("DATA"):
+                        page_objects[current_page].handle_event(event)
+                    elif current_page == pages.index("RADIO"):
+                        page_objects[current_page].handle_event(event)
+                    elif current_page == pages.index("MAP"):
+                        page_objects[current_page].handle_event(event)
 
         # Check for hacking game result
         if current_page == pages.index("DATA"):
             hacking_result = page_objects[current_page].get_hacking_game_result()
             if hacking_result is True:
                 current_page = pages.index("STAT")
-            # If hacking_result is False, we stay on the DATA page
+                print("Hacking game won, switched to STAT page")  # Debug statement
 
         # Create a canvas to render the game screen
         canvas = pygame.Surface((CANVAS_WIDTH, CANVAS_HEIGHT))
@@ -171,7 +222,6 @@ def main():
 
         # Apply CRT shader on the game screen
         if not PI:
-            #crt_screen = crt_shader.apply(game_screen.copy())
             crt_screen = game_screen
         else:
             crt_screen = game_screen
@@ -179,16 +229,18 @@ def main():
         # Blit the CRT screen onto the canvas with the offset
         canvas.blit(crt_screen, (OFFSET_X, OFFSET_Y))
 
-        # Display the mouse position for debugging
+        # Display the mouse position and FPS for debugging
         draw_mouse_position(canvas, small_font, get_color('BRIGHT'))
+        draw_fps(canvas, small_font, get_color('BRIGHT'), clock)
 
         # Display the canvas
         screen.blit(canvas, (0, 0))
         
         pygame.display.flip()
 
-        if current_page == pages.index("RADIO"):
-            page_objects[current_page].update()
+        if current_time - last_radio_update > radio_update_interval:
+            page_objects[pages.index("RADIO")].update()
+            last_radio_update = current_time
         
         if current_page == pages.index("DATA"):
             page_objects[current_page].update()
