@@ -185,6 +185,10 @@ def main():
                         page_objects[current_page].handle_event(event)
                     elif current_page == pages.index("MAP"):
                         page_objects[current_page].handle_event(event)
+                elif event.key in [pygame.K_PLUS, pygame.K_MINUS, pygame.K_EQUALS, pygame.K_c]:
+                    play_random_sound(horizontal_sounds)
+                    if current_page == pages.index("MAP"):
+                        page_objects[current_page].handle_event(event)
                 elif event.key == pygame.K_RETURN:
                     select_sound.play()
                     if current_page == pages.index("DATA"):

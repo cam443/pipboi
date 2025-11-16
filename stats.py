@@ -218,6 +218,7 @@ class StatPage:
     def draw_sensors(self, surface, font, color):
         sensor_data = [
             ("heart_rate", f"{self.heart_rate:.1f} BPM", (460, 150)),
+            ("spo2", f"{self.spo2}%", (460, 220)),  # Near arm
             ("temperature", f"{self.temperature:.1f}°F", (20, 120)),
             ("humidity", f"{self.humidity:.1f}%", (20, 190)),
             ("pressure", f"{self.pressure:.2f} inHg", (20, 260)),
